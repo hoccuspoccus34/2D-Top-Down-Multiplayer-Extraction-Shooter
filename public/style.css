@@ -1,0 +1,313 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   style.css — Dark Fantasy / Shadow Realm theme
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0f;
+  color: #c8c8d8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  user-select: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── Join Screen ──────────────────────────────────────────────────────────── */
+#join-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #1a0a1e 0%, #0a0a0f 70%);
+}
+
+.join-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 48px 56px;
+  background: rgba(10, 5, 20, 0.85);
+  border: 1px solid #3a1a4a;
+  border-radius: 8px;
+  box-shadow: 0 0 48px rgba(140, 0, 200, 0.25), 0 0 8px rgba(0,0,0,0.8);
+}
+
+.title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #d00a3c;
+  text-shadow: 0 0 20px rgba(208, 10, 60, 0.7);
+  letter-spacing: 2px;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #7a6a9a;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+#name-input {
+  width: 240px;
+  padding: 10px 14px;
+  background: #12101a;
+  border: 1px solid #4a2a6a;
+  border-radius: 4px;
+  color: #e0d8f0;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#name-input:focus {
+  border-color: #8a30c0;
+}
+
+#join-btn {
+  padding: 10px 32px;
+  background: #6a0a20;
+  border: 1px solid #c00a3c;
+  border-radius: 4px;
+  color: #f0d0d8;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+#join-btn:hover {
+  background: #a00a2e;
+  box-shadow: 0 0 14px rgba(200, 10, 60, 0.5);
+}
+
+/* ── Game Screen ──────────────────────────────────────────────────────────── */
+#game-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#gameCanvas {
+  display: block;
+  /* Canvas fills the viewport; JS resizes it dynamically */
+  cursor: crosshair;
+  background: #0a0a0f;
+}
+
+/* ── HUD – HP Bar ─────────────────────────────────────────────────────────── */
+#hud-hp {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(5, 3, 10, 0.75);
+  padding: 8px 12px;
+  border: 1px solid #2a1a3a;
+  border-radius: 4px;
+  min-width: 220px;
+}
+
+#hp-bar-wrap {
+  flex: 1;
+  height: 10px;
+  background: #1a0a1a;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+#hp-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #a00a2e, #e02050);
+  border-radius: 5px;
+  transition: width 0.1s ease-out;
+}
+
+#hp-text {
+  font-size: 0.8rem;
+  color: #b0a0c0;
+  white-space: nowrap;
+}
+
+/* ── HUD – Inventory ──────────────────────────────────────────────────────── */
+#hud-inventory {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(5, 3, 10, 0.8);
+  border: 1px solid #2a1a3a;
+  border-radius: 4px;
+  padding: 10px 14px;
+  min-width: 180px;
+  max-width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+#inventory-list {
+  list-style: none;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#inventory-list li {
+  padding: 4px 8px;
+  background: rgba(90, 20, 120, 0.25);
+  border-left: 3px solid #6a0a90;
+  border-radius: 2px;
+  font-size: 0.8rem;
+  color: #d8c8f0;
+}
+
+#inventory-list li.empty-slot {
+  color: #4a3a5a;
+  border-left-color: #2a1a3a;
+  background: transparent;
+  font-style: italic;
+}
+
+/* ── HUD – Extraction Progress Bar ───────────────────────────────────────── */
+#hud-extraction {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(5, 3, 10, 0.85);
+  border: 1px solid #003a7a;
+  border-radius: 4px;
+  padding: 10px 20px;
+  min-width: 240px;
+}
+
+#hud-extraction .hud-label {
+  color: #50a0ff;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  text-shadow: 0 0 10px rgba(80, 160, 255, 0.6);
+}
+
+#extraction-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: #051428;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#extraction-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #0050c0, #40a0ff);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+
+/* ── HUD – Controls Hint ──────────────────────────────────────────────────── */
+#hud-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #3a3050;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+/* ── Shared label style ───────────────────────────────────────────────────── */
+.hud-label {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #6a5a8a;
+  white-space: nowrap;
+}
+
+/* ── Overlay (Death / Extraction End) ────────────────────────────────────── */
+#overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+#overlay-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 56px;
+  background: rgba(10, 5, 20, 0.95);
+  border: 1px solid #3a1a2a;
+  border-radius: 8px;
+  box-shadow: 0 0 48px rgba(200, 10, 60, 0.2);
+  text-align: center;
+}
+
+#overlay-title {
+  font-size: 2rem;
+  color: #d00a3c;
+  text-shadow: 0 0 20px rgba(208, 10, 60, 0.6);
+}
+
+#overlay-message {
+  color: #9a8aaa;
+  max-width: 340px;
+  line-height: 1.6;
+}
+
+#overlay-btn {
+  margin-top: 8px;
+  padding: 10px 32px;
+  background: #3a0a12;
+  border: 1px solid #a00a2e;
+  border-radius: 4px;
+  color: #e0c0c8;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#overlay-btn:hover {
+  background: #700a1e;
+}
+
+/* ── Scrollbar styling (inventory panel) ─────────────────────────────────── */
+#hud-inventory::-webkit-scrollbar {
+  width: 4px;
+}
+#hud-inventory::-webkit-scrollbar-track {
+  background: #0a050f;
+}
+#hud-inventory::-webkit-scrollbar-thumb {
+  background: #3a1a4a;
+  border-radius: 2px;
+}
