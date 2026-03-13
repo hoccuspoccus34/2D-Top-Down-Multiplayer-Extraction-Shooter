@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shadow Realm — Extraction Shooter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       JOIN SCREEN — shown before the game starts
+  ════════════════════════════════════════════════════════════════════ -->
+  <div id="join-screen">
+    <div class="join-box">
+      <h1 class="title">☠ Shadow Realm</h1>
+      <p class="subtitle">2D Extraction Shooter</p>
+      <input id="name-input" type="text" maxlength="20"
+             placeholder="Enter your name…" autocomplete="off" />
+      <button id="join-btn">Enter the Realm</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       GAME SCREEN — canvas + HUD overlay
+  ════════════════════════════════════════════════════════════════════ -->
+  <div id="game-screen" class="hidden">
+
+    <!-- HTML5 Canvas — the entire game world is drawn here -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD: top-left health bar -->
+    <div id="hud-hp">
+      <span class="hud-label">HP</span>
+      <div id="hp-bar-wrap">
+        <div id="hp-bar"></div>
+      </div>
+      <span id="hp-text">100 / 100</span>
+    </div>
+
+    <!-- HUD: top-right inventory panel -->
+    <div id="hud-inventory">
+      <span class="hud-label">Inventory</span>
+      <ul id="inventory-list">
+        <li class="empty-slot">— empty —</li>
+      </ul>
+    </div>
+
+    <!-- HUD: bottom-centre extraction progress bar (hidden until on portal) -->
+    <div id="hud-extraction" class="hidden">
+      <span class="hud-label">Extracting…</span>
+      <div id="extraction-bar-wrap">
+        <div id="extraction-bar"></div>
+      </div>
+    </div>
+
+    <!-- Controls reminder (bottom-left) -->
+    <div id="hud-controls">
+      WASD: Move &nbsp;|&nbsp; Mouse: Aim &nbsp;|&nbsp;
+      LClick: Shoot &nbsp;|&nbsp; E: Loot
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       OVERLAY — used for death / extraction end screens
+  ════════════════════════════════════════════════════════════════════ -->
+  <div id="overlay" class="hidden">
+    <div id="overlay-box">
+      <h2 id="overlay-title">You Died</h2>
+      <p id="overlay-message">All your loot has been dropped.</p>
+      <button id="overlay-btn" onclick="location.reload()">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Socket.io client library (served automatically by socket.io) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Our game client -->
+  <script src="client.js"></script>
+</body>
+</html>
