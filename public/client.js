@@ -35,9 +35,10 @@ let gameInited    = false;  // True once 'init' event received
 // World constants received from the server on 'init'
 let MAP_W         = 2000;
 let MAP_H         = 2000;
-let VISION_R      = 220;
+let VISION_R      = 600;
 let EXTRACT_TIME  = 3;
 let PORTAL_DEF    = null;   // { x, y, size }
+let ITEM_DEFS     = {};     // { [name]: { emoji, stat, value, description } }
 
 // Latest authoritative snapshot from the server
 let latestState   = null;
@@ -58,6 +59,13 @@ let aimAngle = 0;
 
 // Time for delta-time calculations
 let lastFrameTime = performance.now();
+
+/** Escape a string for safe insertion into HTML. */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 // ─── Resize Canvas to Viewport ────────────────────────────────────────────────
 function resizeCanvas() {
@@ -104,6 +112,7 @@ function bindSocketEvents() {
     VISION_R     = data.visionRadius;
     EXTRACT_TIME = data.extractionTime;
     PORTAL_DEF   = data.portal;
+    ITEM_DEFS    = data.itemDefs || {};
     gameInited   = true;
     console.log('[Client] Initialised. My ID:', myId);
   });
@@ -254,8 +263,8 @@ function drawFrame() {
   const W = canvas.width;
   const H = canvas.height;
 
-  // 1. Clear with dark background
-  ctx.fillStyle = '#06050d';
+  // 1. Clear with dark-but-visible background
+  ctx.fillStyle = '#12101e';
   ctx.fillRect(0, 0, W, H);
 
   ctx.save();
@@ -283,8 +292,11 @@ function drawFrame() {
   }
   if (myPlayer) drawPlayer(myPlayer, true);
 
-  // 8. Draw fog of war on top of everything else
-  if (myPlayer) drawFog(myPlayer.x, myPlayer.y);
+  // 8. Draw map boundary indicators so players can see the edges
+  drawMapBorder();
+
+  // 9. Draw fog of war on top of everything else (softer)
+  if (myPlayer) drawFog(myPlayer);
 
   ctx.restore();
 }
@@ -297,7 +309,7 @@ function drawGrid() {
   const endX = camX + canvas.width  + TILE;
   const endY = camY + canvas.height + TILE;
 
-  ctx.strokeStyle = 'rgba(40, 30, 60, 0.45)';
+  ctx.strokeStyle = 'rgba(60, 50, 90, 0.6)';
   ctx.lineWidth = 0.5;
   ctx.beginPath();
   for (let x = startX; x < endX; x += TILE) {
@@ -487,37 +499,51 @@ function drawPlayer(player, isMe) {
 
 /**
  * Draw fog of war using a radial gradient clipped to the whole canvas.
- * Everything outside the vision radius is pitch black.
+ * Much softer than before: the edges fade gently and player upgrades expand vision.
  */
-function drawFog(worldX, worldY) {
+function drawFog(player) {
   const W = canvas.width;
   const H = canvas.height;
 
+  // Vision radius includes item-based vision bonuses
+  const effectiveVision = VISION_R + (player.bonusVision || 0);
+
   // Screen-space position of the local player
-  const sx = worldX - camX;
-  const sy = worldY - camY;
+  const sx = player.x - camX;
+  const sy = player.y - camY;
 
-  // Create a radial gradient: transparent in the centre (vision area),
-  // fully opaque black at the vision boundary and beyond.
-  const grad = ctx.createRadialGradient(sx, sy, VISION_R * 0.6, sx, sy, VISION_R);
+  // Soft outer vignette — gentle darkening beyond the vision radius
+  const grad = ctx.createRadialGradient(sx, sy, effectiveVision * 0.7, sx, sy, effectiveVision * 1.4);
   grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  grad.addColorStop(1, 'rgba(0, 0, 0, 1)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
 
-  // Fill the entire canvas with the gradient
   ctx.fillStyle = grad;
-  ctx.fillRect(camX, camY, W, H); // world-space coords matching the viewport
+  ctx.fillRect(camX, camY, W, H);
+}
 
-  // Additionally draw a vignette that fully darkens beyond the vision radius.
-  const vignette = ctx.createRadialGradient(sx, sy, VISION_R * 0.8, sx, sy, VISION_R * 2);
-  vignette.addColorStop(0, 'rgba(0,0,0,0)');
-  vignette.addColorStop(1, 'rgba(0,0,0,0.98)');
-  ctx.fillStyle = vignette;
-  ctx.fillRect(camX, camY, canvas.width, canvas.height);
+/** Draw a visible border around the map edges so players know where the boundary is. */
+function drawMapBorder() {
+  ctx.strokeStyle = '#4a2a6a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, MAP_W, MAP_H);
+
+  // Corner markers
+  const markerSize = 30;
+  ctx.strokeStyle = 'rgba(140, 60, 200, 0.6)';
+  ctx.lineWidth = 2;
+  const corners = [
+    [0, 0], [MAP_W, 0], [0, MAP_H], [MAP_W, MAP_H],
+  ];
+  for (const [cx, cy] of corners) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, markerSize, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 
 /** Minimal loading/connecting screen. */
 function drawLoading() {
-  ctx.fillStyle = '#06050d';
+  ctx.fillStyle = '#12101e';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#4a3a6a';
   ctx.font = '18px monospace';
@@ -537,17 +563,31 @@ function updateHUD() {
   hpBar.style.width = `${hpFrac * 100}%`;
   hpText.textContent = `${Math.max(0, me.hp)} / ${me.maxHp}`;
 
-  // Inventory list
+  // Inventory list with item emojis and descriptions
   inventoryList.innerHTML = '';
   if (me.inventory.length === 0) {
     inventoryList.innerHTML = '<li class="empty-slot">— empty —</li>';
   } else {
     for (const item of me.inventory) {
       const li = document.createElement('li');
-      li.textContent = item;
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'item-icon';
+      const def = ITEM_DEFS[item];
+      iconSpan.textContent = def ? def.emoji : '•';
+      li.appendChild(iconSpan);
+      li.appendChild(document.createTextNode(` ${item}`));
+      if (def && def.description) {
+        const descSpan = document.createElement('span');
+        descSpan.className = 'item-desc';
+        descSpan.textContent = ` — ${def.description}`;
+        li.appendChild(descSpan);
+      }
       inventoryList.appendChild(li);
     }
   }
+
+  // Stats line (show upgrade bonuses)
+  updateStatsHUD(me);
 
   // Extraction progress bar
   if (me.extractionProgress > 0) {
@@ -558,6 +598,55 @@ function updateHUD() {
     extractionHud.classList.add('hidden');
     extractionBar.style.width = '0%';
   }
+
+  // Leaderboard
+  updateLeaderboard(latestState.leaderboard || []);
+}
+
+/** Show player upgrade stats beneath the HP bar. */
+function updateStatsHUD(me) {
+  let statsEl = document.getElementById('hud-stats');
+  if (!statsEl) {
+    statsEl = document.createElement('div');
+    statsEl.id = 'hud-stats';
+    document.getElementById('game-screen').appendChild(statsEl);
+  }
+  const dmg = ITEM_DEFS ? (me.bonusDamage || 0) : 0;
+  const spd = me.bonusSpeed || 0;
+  const vis = me.bonusVision || 0;
+  statsEl.innerHTML =
+    `<span class="stat-item">🗡️ DMG +${dmg}</span>` +
+    `<span class="stat-item">⚡ SPD +${spd}</span>` +
+    `<span class="stat-item">👁️ VIS +${vis}</span>` +
+    `<span class="stat-item">💀 Kills ${me.kills || 0}</span>`;
+}
+
+/** Update the leaderboard HUD panel. */
+function updateLeaderboard(leaderboard) {
+  let lbEl = document.getElementById('hud-leaderboard');
+  if (!lbEl) {
+    lbEl = document.createElement('div');
+    lbEl.id = 'hud-leaderboard';
+    document.getElementById('game-screen').appendChild(lbEl);
+  }
+
+  let html = '<span class="hud-label">Leaderboard</span><ol id="leaderboard-list">';
+  if (leaderboard.length === 0) {
+    html += '<li class="lb-empty">No players</li>';
+  } else {
+    for (const entry of leaderboard) {
+      const isMe = latestState && latestState.players[myId] &&
+                   latestState.players[myId].name === entry.name;
+      const meClass = isMe ? ' lb-me' : '';
+      html += `<li class="lb-entry${meClass}">` +
+        `<span class="lb-name">${escapeHtml(entry.name)}</span>` +
+        `<span class="lb-kills">💀 ${entry.kills}</span>` +
+        `<span class="lb-items">📦 ${entry.items}</span>` +
+        `</li>`;
+    }
+  }
+  html += '</ol>';
+  lbEl.innerHTML = html;
 }
 
 // ─── Visual Feedback Helpers ──────────────────────────────────────────────────

@@ -37,7 +37,7 @@ const TILE_SIZE = 40;     // visual grid tile size
 const PLAYER_RADIUS = 16;
 const PLAYER_SPEED = 180;        // pixels per second
 const PLAYER_MAX_HP = 100;
-const VISION_RADIUS = 220;       // fog-of-war radius in pixels
+const VISION_RADIUS = 600;       // fog-of-war radius in pixels
 
 // ─── Projectile Constants ─────────────────────────────────────────────────────
 const PROJECTILE_SPEED = 420;    // pixels per second
@@ -50,10 +50,17 @@ const PORTAL_SIZE = 60;          // square side length
 const EXTRACTION_TIME = 3;       // seconds standing on portal to extract
 
 // ─── Item Pool ────────────────────────────────────────────────────────────────
-const ITEM_POOL = [
-  'Gold Coin', 'Shadow Blade', 'Crimson Shard', 'Cursed Tome',
-  'Iron Key', 'Elixir of Shadows', 'Bone Relic', 'Void Crystal',
-];
+const ITEM_DEFS = {
+  'Gold Coin':         { emoji: '🪙', stat: null,     value: 0,   description: 'Shiny but useless… or is it?' },
+  'Shadow Blade':      { emoji: '🗡️', stat: 'damage', value: 5,   description: '+5 Damage' },
+  'Crimson Shard':     { emoji: '💎', stat: 'maxHp',  value: 15,  description: '+15 Max HP' },
+  'Cursed Tome':       { emoji: '📖', stat: 'vision', value: 60,  description: '+60 Vision' },
+  'Iron Key':          { emoji: '🔑', stat: null,     value: 0,   description: 'Opens something…' },
+  'Elixir of Shadows': { emoji: '🧪', stat: 'speed',  value: 20,  description: '+20 Speed' },
+  'Bone Relic':        { emoji: '🦴', stat: 'maxHp',  value: 10,  description: '+10 Max HP' },
+  'Void Crystal':      { emoji: '🔮', stat: 'damage', value: 8,   description: '+8 Damage' },
+};
+const ITEM_POOL = Object.keys(ITEM_DEFS);
 
 // ─── Chest Configuration ──────────────────────────────────────────────────────
 const CHEST_COUNT = 12;
@@ -152,6 +159,11 @@ function createPlayer(socketId, name) {
     hp: PLAYER_MAX_HP,
     maxHp: PLAYER_MAX_HP,
     inventory: [],
+    kills: 0,
+    // Upgrade bonuses accumulated from items
+    bonusDamage: 0,
+    bonusSpeed: 0,
+    bonusVision: 0,
     // Extraction progress (seconds standing on portal)
     extractionProgress: 0,
     // Input state received from client
@@ -189,6 +201,7 @@ io.on('connection', (socket) => {
       extractionTime: EXTRACTION_TIME,
       playerRadius: PLAYER_RADIUS,
       projectileRadius: PROJECTILE_RADIUS,
+      itemDefs: ITEM_DEFS,
     });
   });
 
@@ -223,7 +236,7 @@ io.on('connection', (socket) => {
       vx: Math.cos(player.aimAngle) * PROJECTILE_SPEED,
       vy: Math.sin(player.aimAngle) * PROJECTILE_SPEED,
       radius: PROJECTILE_RADIUS,
-      damage: PROJECTILE_DAMAGE,
+      damage: PROJECTILE_DAMAGE + player.bonusDamage,
       lifetime: PROJECTILE_LIFETIME,
     });
   });
@@ -246,6 +259,29 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── Item Upgrade Helper ──────────────────────────────────────────────────────
+
+/** Apply an item's stat boost to a player. */
+function applyItemUpgrade(player, itemName) {
+  const def = ITEM_DEFS[itemName];
+  if (!def || !def.stat) return;
+  switch (def.stat) {
+    case 'damage':
+      player.bonusDamage += def.value;
+      break;
+    case 'maxHp':
+      player.maxHp += def.value;
+      player.hp = Math.min(player.hp + def.value, player.maxHp);
+      break;
+    case 'speed':
+      player.bonusSpeed += def.value;
+      break;
+    case 'vision':
+      player.bonusVision += def.value;
+      break;
+  }
+}
+
 // ─── Loot Helpers ─────────────────────────────────────────────────────────────
 
 /**
@@ -261,6 +297,7 @@ function tryLootNearby(player) {
     if (circleRect(player.x, player.y, REACH, chest.x, chest.y, chest.size, chest.size)) {
       chest.looted = true;
       player.inventory.push(chest.item);
+      applyItemUpgrade(player, chest.item);
       io.to(player.id).emit('itemPickup', { item: chest.item, source: 'chest' });
       console.log(`[Game] ${player.name} looted chest: ${chest.item}`);
       return;
@@ -274,6 +311,7 @@ function tryLootNearby(player) {
     if (circleCircle(player.x, player.y, LOOT_REACH, pile.x, pile.y, LOOT_RADIUS)) {
       const items = pile.items.splice(0); // take all items in the pile
       player.inventory.push(...items);
+      for (const item of items) applyItemUpgrade(player, item);
       gameState.lootPiles.splice(i, 1);
       for (const item of items) {
         io.to(player.id).emit('itemPickup', { item, source: 'ground' });
@@ -365,8 +403,8 @@ function updatePlayers(dt) {
       dy *= 0.7071;
     }
 
-    p.x += dx * PLAYER_SPEED * dt;
-    p.y += dy * PLAYER_SPEED * dt;
+    p.x += dx * (PLAYER_SPEED + p.bonusSpeed) * dt;
+    p.y += dy * (PLAYER_SPEED + p.bonusSpeed) * dt;
 
     // Clamp to map boundaries
     p.x = clamp(p.x, p.radius, MAP_WIDTH - p.radius);
@@ -378,6 +416,7 @@ function updatePlayers(dt) {
       if (circleRect(p.x, p.y, p.radius + 2, chest.x, chest.y, chest.size, chest.size)) {
         chest.looted = true;
         p.inventory.push(chest.item);
+        applyItemUpgrade(p, chest.item);
         io.to(p.id).emit('itemPickup', { item: chest.item, source: 'chest' });
         console.log(`[Game] ${p.name} auto-looted chest: ${chest.item}`);
       }
@@ -462,6 +501,9 @@ function updateProjectiles(dt) {
 
         if (target.hp <= 0) {
           target.hp = 0;
+          // Track the kill for the shooter
+          const shooter = gameState.players[proj.ownerId];
+          if (shooter) shooter.kills += 1;
           killPlayer(target, proj.ownerId);
         }
         break; // a projectile can only hit one target
@@ -478,6 +520,7 @@ function updateProjectiles(dt) {
  */
 function buildSnapshot() {
   const players = {};
+  const leaderboard = [];
   for (const id in gameState.players) {
     const p = gameState.players[id];
     players[id] = {
@@ -491,11 +534,23 @@ function buildSnapshot() {
       aimAngle: p.aimAngle,
       inventory: p.inventory,
       extractionProgress: p.extractionProgress,
+      kills: p.kills,
+      bonusDamage: p.bonusDamage,
+      bonusSpeed: p.bonusSpeed,
+      bonusVision: p.bonusVision,
     };
+    leaderboard.push({
+      name: p.name,
+      kills: p.kills,
+      items: p.inventory.length,
+    });
   }
+  // Sort leaderboard: kills descending, then items descending
+  leaderboard.sort((a, b) => b.kills - a.kills || b.items - a.items);
 
   return {
     players,
+    leaderboard,
     projectiles: gameState.projectiles.map((proj) => ({
       id: proj.id,
       x: proj.x,

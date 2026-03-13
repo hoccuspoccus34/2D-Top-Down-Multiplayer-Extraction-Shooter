@@ -106,7 +106,7 @@ html, body {
   display: block;
   /* Canvas fills the viewport; JS resizes it dynamically */
   cursor: crosshair;
-  background: #0a0a0f;
+  background: #12101e;
 }
 
 /* ── HUD – HP Bar ─────────────────────────────────────────────────────────── */
@@ -157,7 +157,7 @@ html, body {
   padding: 10px 14px;
   min-width: 180px;
   max-width: 260px;
-  max-height: 320px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -308,6 +308,119 @@ html, body {
   background: #0a050f;
 }
 #hud-inventory::-webkit-scrollbar-thumb {
+  background: #3a1a4a;
+  border-radius: 2px;
+}
+
+/* ── HUD – Item Icons & Descriptions ─────────────────────────────────────── */
+.item-icon {
+  margin-right: 4px;
+  font-size: 1rem;
+}
+
+.item-desc {
+  display: block;
+  font-size: 0.65rem;
+  color: #8a7aaa;
+  margin-top: 1px;
+  font-style: italic;
+}
+
+/* ── HUD – Player Stats ──────────────────────────────────────────────────── */
+#hud-stats {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  display: flex;
+  gap: 10px;
+  background: rgba(5, 3, 10, 0.75);
+  padding: 6px 12px;
+  border: 1px solid #2a1a3a;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.stat-item {
+  color: #b0a0d0;
+  white-space: nowrap;
+}
+
+/* ── HUD – Leaderboard ───────────────────────────────────────────────────── */
+#hud-leaderboard {
+  position: absolute;
+  top: 240px;
+  right: 16px;
+  background: rgba(5, 3, 10, 0.8);
+  border: 1px solid #2a1a3a;
+  border-radius: 4px;
+  padding: 10px 14px;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+#leaderboard-list {
+  list-style: none;
+  margin-top: 6px;
+  counter-reset: lb-counter;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+}
+
+.lb-entry {
+  counter-increment: lb-counter;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(60, 20, 80, 0.2);
+  border-radius: 2px;
+  font-size: 0.78rem;
+  color: #c8b8e0;
+}
+
+.lb-entry::before {
+  content: counter(lb-counter) ".";
+  color: #6a5a8a;
+  font-weight: 700;
+  min-width: 18px;
+}
+
+.lb-entry.lb-me {
+  background: rgba(40, 140, 80, 0.25);
+  border-left: 3px solid #40c080;
+}
+
+.lb-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-kills, .lb-items {
+  font-size: 0.7rem;
+  color: #9a8aaa;
+  white-space: nowrap;
+}
+
+.lb-empty {
+  color: #4a3a5a;
+  font-style: italic;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+#hud-leaderboard::-webkit-scrollbar {
+  width: 4px;
+}
+#hud-leaderboard::-webkit-scrollbar-track {
+  background: #0a050f;
+}
+#hud-leaderboard::-webkit-scrollbar-thumb {
   background: #3a1a4a;
   border-radius: 2px;
 }
