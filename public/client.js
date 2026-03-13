@@ -60,6 +60,13 @@ let aimAngle = 0;
 // Time for delta-time calculations
 let lastFrameTime = performance.now();
 
+/** Escape a string for safe insertion into HTML. */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // ─── Resize Canvas to Viewport ────────────────────────────────────────────────
 function resizeCanvas() {
   canvas.width  = window.innerWidth;
@@ -563,10 +570,18 @@ function updateHUD() {
   } else {
     for (const item of me.inventory) {
       const li = document.createElement('li');
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'item-icon';
       const def = ITEM_DEFS[item];
-      const emoji = def ? def.emoji : '•';
-      const desc = def && def.description ? ` — ${def.description}` : '';
-      li.innerHTML = `<span class="item-icon">${emoji}</span> ${item}<span class="item-desc">${desc}</span>`;
+      iconSpan.textContent = def ? def.emoji : '•';
+      li.appendChild(iconSpan);
+      li.appendChild(document.createTextNode(` ${item}`));
+      if (def && def.description) {
+        const descSpan = document.createElement('span');
+        descSpan.className = 'item-desc';
+        descSpan.textContent = ` — ${def.description}`;
+        li.appendChild(descSpan);
+      }
       inventoryList.appendChild(li);
     }
   }
@@ -624,7 +639,7 @@ function updateLeaderboard(leaderboard) {
                    latestState.players[myId].name === entry.name;
       const meClass = isMe ? ' lb-me' : '';
       html += `<li class="lb-entry${meClass}">` +
-        `<span class="lb-name">${entry.name}</span>` +
+        `<span class="lb-name">${escapeHtml(entry.name)}</span>` +
         `<span class="lb-kills">💀 ${entry.kills}</span>` +
         `<span class="lb-items">📦 ${entry.items}</span>` +
         `</li>`;
